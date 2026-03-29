@@ -5,11 +5,11 @@
 - Project: `agent-orchestrator`
 - Active branch: `feat/phase-03-worker-execution-mvp`
 - Active phase: `phase-03`
-- Status: `PHASE_01_CLOSED / PHASE_02_MERGED / PHASE_03_AWAITING_REVIEW`
+- Status: `PHASE_01_CLOSED / PHASE_02_MERGED / PHASE_03_APPROVED`
 - Owner: `Codex`
 - Reviewer: `Claude Code`
 - Repository landing branch: `main`
-- Next step: implement local worker execution MVP on top of the Phase 02 control chain
+- Next step: merge Phase 03 to main and kickoff Phase 04
 - Baseline docs:
   - `design_docs/agent-orchestrator-spec-v1.2.md`
   - `design_docs/agent-orchestrator-interface-design-v1.2.md`
@@ -20,11 +20,11 @@
 | --- | --- | --- |
 | Phase 01 | Closed | Accepted / merged / closeout completed |
 | Phase 02 | Merged / closed | Minimal control flow 已 merged 到 `main` 并完成 closeout |
-| Phase 03 | In progress / awaiting review | 单机真实 worker 执行 MVP 已落地到当前分支，等待 reviewer 复核 |
+| Phase 03 | Approved / pending merge | 单机真实 worker 执行 MVP 已通过 review，准备 merge |
 
 ## Phase 03 Status
 
-- State: `awaiting review`
+- State: `approved_pending_merge`
 - Goal: 单机真实 worker 执行 MVP
 - Plan: [design_docs/coordination/phase-03/codex-plan.md](phase-03/codex-plan.md)
 - Status log: [design_docs/coordination/phase-03/codex-status.md](phase-03/codex-status.md)
@@ -74,7 +74,7 @@
 | Phase 02 closeout docs | Done | dashboard / status / handoff / merge summary 已同步到 merged 状态 |
 | Phase 02 merge to main | Done | 已 fast-forward 到 `main@07ff8ad` |
 | Phase 03 kickoff docs | Done | `codex-plan.md` / `codex-status.md` / `codex-handoff.md` 已建立并同步到 review 前状态 |
-| Phase 03 worker execution MVP | In Progress | 文件系统 artifact store / subprocess runner / bootstrap & phase 真实执行链已完成，当前等待 reviewer |
+| Phase 03 worker execution MVP | Approved | 文件系统 artifact store / subprocess runner / bootstrap & phase 真实执行链已通过 review |
 | Read spec/interface docs | Done | 已确认 v1.2 门禁与骨架约束 |
 | Write phase-01 phase doc | Done | `design_docs/phases/phase-01-gates-and-skeleton.md` 已转为完成阶段档案 |
 | Create package skeleton | Done | `agent_orchestrator/` 与 `tests/` 已随 PR #1 合入 `main` |

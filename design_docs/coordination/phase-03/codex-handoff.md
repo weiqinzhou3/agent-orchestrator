@@ -1,6 +1,6 @@
 # Phase 03 Codex Handoff
 
-**Status:** `awaiting_review`
+**Status:** `approved_pending_merge`
 **Branch:** `feat/phase-03-worker-execution-mvp`
 
 ## 本轮定位

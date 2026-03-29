@@ -1,8 +1,8 @@
 # Phase 03 Codex Status
 
-- Current status: `awaiting_review`
+- Current status: `approved_pending_merge`
 - Current branch: `feat/phase-03-worker-execution-mvp`
-- Last updated: `2026-03-29 23:20:56 +0800`
+- Last updated: `2026-03-29 23:35:00 +0800`
 
 ## 已完成
 
@@ -41,10 +41,11 @@
   - PASS -> close-path -> `DONE`
   - CONDITIONAL_PASS / FAIL / invalid payload / missing artifact 路由已覆盖
 - 已完成验证：`pytest -q` -> `397 passed in 4.05s`
+- 已通过 Claude review：结论为 `APPROVED`
 
 ## 进行中
 
-- 当前无功能开发进行中；分支处于 reviewer 前收口状态。
+- 当前无功能开发进行中；分支处于 PR 合并准备阶段。
 
 ## 未开始
 
@@ -59,5 +60,5 @@
 
 ## 下一步
 
-- 等待 reviewer 对 Phase 03 worker execution MVP 做代码审查。
-- 若 reviewer 无阻塞问题，再决定是否继续推进 `phase-fix-blockers` / `phase-recheck` 的真实执行。
+- 将 `feat/phase-03-worker-execution-mvp` 合并到 `main`。
+- 启动 Phase 04。
