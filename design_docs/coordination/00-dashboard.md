@@ -3,13 +3,13 @@
 ## Current Snapshot
 
 - Project: `agent-orchestrator`
-- Active branch: `feat/phase-02-minimal-control-flow`
-- Active phase: `phase-02`
-- Status: `PHASE_01_CLOSED / PHASE_02_APPROVED_PENDING_MERGE`
+- Active branch: `feat/phase-03-worker-execution-mvp`
+- Active phase: `phase-03`
+- Status: `PHASE_01_CLOSED / PHASE_02_MERGED / PHASE_03_APPROVED`
 - Owner: `Codex`
 - Reviewer: `Claude Code`
 - Repository landing branch: `main`
-- Next step: merge `feat/phase-02-minimal-control-flow` to `main`
+- Next step: merge Phase 03 to main and kickoff Phase 04
 - Baseline docs:
   - `design_docs/agent-orchestrator-spec-v1.2.md`
   - `design_docs/agent-orchestrator-interface-design-v1.2.md`
@@ -19,11 +19,26 @@
 | Phase | Status | Notes |
 | --- | --- | --- |
 | Phase 01 | Closed | Accepted / merged / closeout completed |
-| Phase 02 | Approved / pending merge | Minimal control flow 已通过 reviewer，当前待 merge 到 `main` |
+| Phase 02 | Merged / closed | Minimal control flow 已 merged 到 `main` 并完成 closeout |
+| Phase 03 | Approved / pending merge | 单机真实 worker 执行 MVP 已通过 review，准备 merge |
+
+## Phase 03 Status
+
+- State: `approved_pending_merge`
+- Goal: 单机真实 worker 执行 MVP
+- Plan: [design_docs/coordination/phase-03/codex-plan.md](phase-03/codex-plan.md)
+- Status log: [design_docs/coordination/phase-03/codex-status.md](phase-03/codex-status.md)
+- Handoff: [design_docs/coordination/phase-03/codex-handoff.md](phase-03/codex-handoff.md)
+
+- 在 Phase 02 的最小控制链路之上，已新增真实 worker execution 抽象、文件系统 artifact store 与本地 subprocess runner。
+- bootstrap 已打通真实执行链：`bootstrap-repo` -> `bootstrap-review` -> gate 路由。
+- phase 已打通真实执行链：`phase-build` -> `phase-review` -> gate / close-path。
+- 继续保留 stub mode、内存 repo、现有 approval / close-path / state machine 语义。
+- 明确不进入远程执行、分布式锁、durable DB persistence、对象存储与外部 SaaS 编排。
 
 ## Phase 02 Status
 
-- State: `approved / pending merge`
+- State: `merged / closed`
 - Goal: 最小控制链路
 - Plan: [design_docs/coordination/phase-02/codex-plan.md](phase-02/codex-plan.md)
 - Status log: [design_docs/coordination/phase-02/codex-status.md](phase-02/codex-status.md)
@@ -31,12 +46,9 @@
 - Merge summary: [design_docs/coordination/phase-02/merge-summary.md](phase-02/merge-summary.md)
 - Reviewer archive: `design_docs/reviews/phase-02-claude-review.md`
 
-- 已在 Phase 01 骨架之上补最小 bootstrap / phase / approval / project 控制闭环。
-- 已把 job / snapshot / artifact / scheduler 推进到最小可用内存实现。
-- Phase 02 minimal control flow 已通过 Claude reviewer，结论为 `APPROVED`，无高/中优先级问题。
-- 当前下一步是将 `feat/phase-02-minimal-control-flow` merge 到 `main`。
-- Phase 03 尚未开始，本轮 closeout 不提前进入 Phase 03 代码或 kickoff。
-- 真实 worker、真实 artifact、真实 adapter side effect 与 durable 持久化仍继续延后。
+- Phase 02 minimal control flow 已 merged 到 `main`。
+- Phase 02 closeout 已完成；本轮不再继续做 Phase 02 收尾。
+- 已冻结的控制语义将直接作为 Phase 03 的基线。
 
 ## Phase 01 Status and Scope
 
@@ -55,12 +67,14 @@
 | Item | Status | Notes |
 | --- | --- | --- |
 | Phase 01 closeout | Done | Accepted / closed / merged to `main` |
-| Phase 02 kickoff docs | Done | `codex-plan.md` / `codex-status.md` / `codex-handoff.md` 已建立并更新 |
+| Phase 02 kickoff docs | Done | `codex-plan.md` / `codex-status.md` / `codex-handoff.md` 已归档 |
 | Phase 02 implementation | Done | 最小控制链路已落地并通过全量测试 |
 | Phase 02 review handoff | Done | reviewer 文档已归档到 `design_docs/reviews/phase-02-claude-review.md` |
 | Phase 02 Claude review | Done | `APPROVED`；无高/中优先级问题，仅保留低优先级人工复核项 |
-| Phase 02 closeout docs | Done | dashboard / status / handoff / merge summary 已同步到 merge 前状态 |
-| Phase 02 merge to main | Pending | 当前唯一剩余动作；完成 merge 前不启动 Phase 03 |
+| Phase 02 closeout docs | Done | dashboard / status / handoff / merge summary 已同步到 merged 状态 |
+| Phase 02 merge to main | Done | 已 fast-forward 到 `main@07ff8ad` |
+| Phase 03 kickoff docs | Done | `codex-plan.md` / `codex-status.md` / `codex-handoff.md` 已建立并同步到 review 前状态 |
+| Phase 03 worker execution MVP | Approved | 文件系统 artifact store / subprocess runner / bootstrap & phase 真实执行链已通过 review |
 | Read spec/interface docs | Done | 已确认 v1.2 门禁与骨架约束 |
 | Write phase-01 phase doc | Done | `design_docs/phases/phase-01-gates-and-skeleton.md` 已转为完成阶段档案 |
 | Create package skeleton | Done | `agent_orchestrator/` 与 `tests/` 已随 PR #1 合入 `main` |
@@ -107,3 +121,10 @@
 - Persistent job / snapshot stores and lease recovery
 - Durable close-path idempotency side effects
 - Phase 03 kickoff and Phase 03 implementation work
+
+## Deferred Beyond Phase 03 MVP
+
+- Remote workers and multi-host scheduling
+- Durable DB persistence and distributed leases
+- Object storage, archival policy, and production-grade observability
+- External SaaS orchestration, enterprise approvals, and UI layers

@@ -35,6 +35,9 @@ class JobExecutionSummary:
     artifact_validation: ArtifactValidationResult
     review_origin_stage: Optional[ReviewOriginStage]
     result_path: Optional[str]
+    exit_code: Optional[int] = None
+    stdout: str = ""
+    stderr: str = ""
 
 
 @dataclass

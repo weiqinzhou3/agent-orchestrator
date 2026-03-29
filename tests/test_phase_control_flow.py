@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import sys
 from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
 
@@ -32,7 +34,9 @@ from agent_orchestrator.infra.db.repositories import (
     InMemoryProjectPlanRepository,
     InMemoryProjectRepository,
 )
-from agent_orchestrator.infra.fs.artifact_store import InMemoryArtifactStore
+from agent_orchestrator.infra.execution.subprocess_runner import SubprocessRunner
+from agent_orchestrator.infra.fs.artifact_store import FileArtifactStore, InMemoryArtifactStore
+from agent_orchestrator.infra.workers.local import LocalSubprocessJobFactory
 
 
 class RecordingPhaseRepository(InMemoryPhaseRepository):
@@ -121,6 +125,46 @@ def _make_service(
         approval_repo=approval_repo,
         gate_snapshot_repo=snapshot_repo,
         artifact_store=artifact_store or InMemoryArtifactStore(),
+    )
+    return service, phase_repo, project_repo, approval_repo, snapshot_repo
+
+
+def _make_real_service(
+    make_project,
+    make_phase,
+    tmp_path: Path,
+    *,
+    phase_status: PhaseStatus,
+    planned_worker_inputs,
+):
+    artifact_store = FileArtifactStore(tmp_path)
+    project_repo = InMemoryProjectRepository(
+        {"demo-project": make_project(ProjectStatus.PHASE_ACTIVE, current_phase="phase-01")}
+    )
+    phase_repo = RecordingPhaseRepository({("demo-project", "phase-01"): make_phase(phase_status)})
+    approval_repo = InMemoryApprovalRepository()
+    snapshot_repo = InMemoryPhaseGateSnapshotRepository()
+    plan_repo = InMemoryProjectPlanRepository({"demo-project": ["phase-01", "phase-02"]})
+    approval_service = ApprovalService(project_repo=project_repo, phase_repo=phase_repo, approval_repo=approval_repo)
+    project_service = ProjectService(project_repo=project_repo, project_plan_repo=plan_repo, approval_service=approval_service)
+    job_repo = InMemoryJobRepository()
+    scheduler = InMemorySchedulerService(
+        job_repo=job_repo,
+        worker_runner=SubprocessRunner(artifact_store=artifact_store),
+        worker_job_factory=LocalSubprocessJobFactory(python_executable=sys.executable),
+        planned_worker_inputs=planned_worker_inputs,
+    )
+    service = PhaseService(
+        phase_repo=phase_repo,
+        run_lock_repo=NoopRunLockRepository(),
+        contract_service=NoApprovalContractService(),
+        approval_service=approval_service,
+        project_service=project_service,
+        job_repo=job_repo,
+        scheduler=scheduler,
+        approval_repo=approval_repo,
+        gate_snapshot_repo=snapshot_repo,
+        artifact_store=artifact_store,
     )
     return service, phase_repo, project_repo, approval_repo, snapshot_repo
 
@@ -297,3 +341,85 @@ def test_phase_fix_recheck_pass_path_uses_latest_snapshot_and_finishes_closeout(
     assert result.final_status == PhaseStatus.DONE
     assert project.status == ProjectStatus.PHASE_DONE
     assert snapshot_repo.get_latest("demo-project", "phase-01").origin_stage == ReviewOriginStage.PHASE_RECHECK
+
+
+@pytest.mark.parametrize(
+    ("planned_worker_inputs", "expected_status", "expected_approval_type"),
+    [
+        (
+            {
+                "phase-build": [{"review_payload": {"decision": "PASS"}}],
+                "phase-review": [{}],
+            },
+            PhaseStatus.DONE,
+            None,
+        ),
+        (
+            {
+                "phase-build": [
+                    {
+                        "review_payload": {
+                            "decision": "CONDITIONAL_PASS",
+                            "important_items": [{"id": "important-1"}],
+                        }
+                    }
+                ],
+                "phase-review": [{}],
+            },
+            PhaseStatus.BLOCKED_ON_HUMAN,
+            ApprovalType.CLOSE_PHASE_WITH_IMPORTANT_OPEN,
+        ),
+        (
+            {
+                "phase-build": [{"review_payload": {"decision": "FAIL", "blockers": [{"id": "blocker-1"}]}}],
+                "phase-review": [{}],
+            },
+            PhaseStatus.BLOCKED_ON_OPEN_BLOCKERS,
+            None,
+        ),
+        (
+            {
+                "phase-build": [{"review_payload": ["invalid-payload"]}],
+                "phase-review": [{}],
+            },
+            PhaseStatus.BLOCKED_ON_MISSING_ARTIFACT,
+            None,
+        ),
+        (
+            {
+                "phase-build": [{"omit_review_output": True}],
+                "phase-review": [{}],
+            },
+            PhaseStatus.BLOCKED_ON_MISSING_ARTIFACT,
+            None,
+        ),
+    ],
+)
+def test_phase_local_subprocess_execution_paths(
+    make_project,
+    make_phase,
+    tmp_path: Path,
+    planned_worker_inputs,
+    expected_status,
+    expected_approval_type,
+) -> None:
+    service, _, project_repo, approval_repo, snapshot_repo = _make_real_service(
+        make_project,
+        make_phase,
+        tmp_path,
+        phase_status=PhaseStatus.NOT_STARTED,
+        planned_worker_inputs=planned_worker_inputs,
+    )
+
+    result = service.run_phase("demo-project", "phase-01")
+
+    assert result.final_status == expected_status
+    if expected_status == PhaseStatus.DONE:
+        assert project_repo.get("demo-project").status == ProjectStatus.PHASE_DONE
+        assert snapshot_repo.get_latest("demo-project", "phase-01").decision.value == "PASS"
+    if expected_approval_type is None:
+        assert result.pending_approval_id is None
+        return
+
+    approval = approval_repo.get(result.pending_approval_id)
+    assert approval.approval_type == expected_approval_type
