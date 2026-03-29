@@ -81,6 +81,7 @@ ALLOWED_PROJECT_TRANSITIONS: Dict[ProjectStatus, Set[ProjectStatus]] = {
     },
     ProjectStatus.BLOCKED_ON_HUMAN: {
         ProjectStatus.BOOTSTRAP_READY,
+        ProjectStatus.BLOCKED_ON_OPEN_BLOCKERS,
         ProjectStatus.RELEASE_READY,
         ProjectStatus.CLOSED,
     },
