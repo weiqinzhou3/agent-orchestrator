@@ -174,3 +174,90 @@ def test_project_request_close_does_not_duplicate_blocked_on_human_transition(ma
     service.request_close("demo-project")
 
     assert project_repo.status_updates == [("demo-project", ProjectStatus.BLOCKED_ON_HUMAN)]
+
+
+def test_approve_contract_approval_returns_phase_to_contract_approved(make_phase, make_project) -> None:
+    project_repo = RecordingProjectRepository({"demo-project": make_project(ProjectStatus.PHASE_ACTIVE, current_phase="phase-01")})
+    phase_repo = RecordingPhaseRepository({("demo-project", "phase-01"): make_phase(PhaseStatus.CONTRACT_VALIDATED)})
+    approval_repo = InMemoryApprovalRepository()
+    service = ApprovalService(project_repo=project_repo, phase_repo=phase_repo, approval_repo=approval_repo)
+    approval = service.create_contract_approval("demo-project", "phase-01", ApprovalType.CONTRACT_APPROVAL)
+
+    outcome = service.approve(approval.approval_id, actor="owner")
+
+    assert outcome.new_phase_status == PhaseStatus.CONTRACT_APPROVED
+    assert phase_repo.get("demo-project", "phase-01").status == PhaseStatus.CONTRACT_APPROVED
+
+
+def test_reject_contract_approval_returns_phase_to_contract_validated(make_phase, make_project) -> None:
+    project_repo = RecordingProjectRepository({"demo-project": make_project(ProjectStatus.PHASE_ACTIVE, current_phase="phase-01")})
+    phase_repo = RecordingPhaseRepository({("demo-project", "phase-01"): make_phase(PhaseStatus.CONTRACT_VALIDATED)})
+    approval_repo = InMemoryApprovalRepository()
+    service = ApprovalService(project_repo=project_repo, phase_repo=phase_repo, approval_repo=approval_repo)
+    approval = service.create_contract_approval("demo-project", "phase-01", ApprovalType.CONTRACT_APPROVAL)
+
+    outcome = service.reject(approval.approval_id, actor="owner")
+
+    assert outcome.new_phase_status == PhaseStatus.CONTRACT_VALIDATED
+    assert phase_repo.get("demo-project", "phase-01").status == PhaseStatus.CONTRACT_VALIDATED
+
+
+def test_approve_and_reject_close_phase_with_important_open_routes_to_expected_phase_states(make_phase, make_project) -> None:
+    project_repo = RecordingProjectRepository({"demo-project": make_project(ProjectStatus.PHASE_ACTIVE, current_phase="phase-01")})
+    approval_repo = InMemoryApprovalRepository()
+
+    approve_phase_repo = RecordingPhaseRepository({("demo-project", "phase-01"): make_phase(PhaseStatus.REVIEW_PENDING)})
+    approve_service = ApprovalService(project_repo=project_repo, phase_repo=approve_phase_repo, approval_repo=approval_repo)
+    approve_approval = approve_service.create_close_phase_with_important_open(
+        "demo-project",
+        "phase-01",
+        origin_stage=ReviewOriginStage.PHASE_REVIEW,
+    )
+    approve_outcome = approve_service.approve(approve_approval.approval_id, actor="owner")
+
+    reject_phase_repo = RecordingPhaseRepository({("demo-project", "phase-02"): make_phase(PhaseStatus.REVIEW_PENDING, phase_name="phase-02")})
+    reject_service = ApprovalService(project_repo=project_repo, phase_repo=reject_phase_repo, approval_repo=approval_repo)
+    reject_approval = reject_service.create_close_phase_with_important_open(
+        "demo-project",
+        "phase-02",
+        origin_stage=ReviewOriginStage.PHASE_REVIEW,
+    )
+    reject_outcome = reject_service.reject(reject_approval.approval_id, actor="owner")
+
+    assert approve_outcome.new_phase_status == PhaseStatus.READY_TO_CLOSE
+    assert approve_phase_repo.get("demo-project", "phase-01").status == PhaseStatus.READY_TO_CLOSE
+    assert reject_outcome.new_phase_status == PhaseStatus.BLOCKED_ON_OPEN_BLOCKERS
+    assert reject_phase_repo.get("demo-project", "phase-02").status == PhaseStatus.BLOCKED_ON_OPEN_BLOCKERS
+
+
+def test_bootstrap_ready_and_release_ready_approvals_route_project_on_approve_and_reject(make_project) -> None:
+    bootstrap_project_repo = RecordingProjectRepository({"demo-project": make_project(ProjectStatus.BOOTSTRAP_REVIEW_PENDING)})
+    phase_repo = RecordingPhaseRepository({})
+    approval_repo = InMemoryApprovalRepository()
+    bootstrap_service = ApprovalService(project_repo=bootstrap_project_repo, phase_repo=phase_repo, approval_repo=approval_repo)
+    bootstrap_approval = bootstrap_service.create_bootstrap_ready_with_important_open("demo-project")
+
+    bootstrap_approve = bootstrap_service.approve(bootstrap_approval.approval_id, actor="owner")
+    assert bootstrap_approve.new_project_status == ProjectStatus.BOOTSTRAP_READY
+    assert bootstrap_project_repo.get("demo-project").status == ProjectStatus.BOOTSTRAP_READY
+
+    reject_project_repo = RecordingProjectRepository({"demo-project-2": make_project(ProjectStatus.BOOTSTRAP_REVIEW_PENDING, project_name="demo-project-2")})
+    reject_service = ApprovalService(project_repo=reject_project_repo, phase_repo=phase_repo, approval_repo=approval_repo)
+    reject_bootstrap_approval = reject_service.create_bootstrap_ready_with_important_open("demo-project-2")
+    bootstrap_reject = reject_service.reject(reject_bootstrap_approval.approval_id, actor="owner")
+    assert bootstrap_reject.new_project_status == ProjectStatus.BLOCKED_ON_OPEN_BLOCKERS
+    assert reject_project_repo.get("demo-project-2").status == ProjectStatus.BLOCKED_ON_OPEN_BLOCKERS
+
+    release_project_repo = RecordingProjectRepository({"demo-project-3": make_project(ProjectStatus.RELEASE_READY, project_name="demo-project-3")})
+    release_service = ApprovalService(project_repo=release_project_repo, phase_repo=phase_repo, approval_repo=approval_repo)
+    release_approval = release_service.create_release_ready_confirm("demo-project-3")
+    release_approve = release_service.approve(release_approval.approval_id, actor="owner")
+    assert release_approve.new_project_status == ProjectStatus.CLOSED
+    assert release_project_repo.get("demo-project-3").status == ProjectStatus.CLOSED
+
+    release_reject_project_repo = RecordingProjectRepository({"demo-project-4": make_project(ProjectStatus.RELEASE_READY, project_name="demo-project-4")})
+    release_reject_service = ApprovalService(project_repo=release_reject_project_repo, phase_repo=phase_repo, approval_repo=approval_repo)
+    release_reject_approval = release_reject_service.create_release_ready_confirm("demo-project-4")
+    release_reject = release_reject_service.reject(release_reject_approval.approval_id, actor="owner")
+    assert release_reject.new_project_status == ProjectStatus.RELEASE_READY
+    assert release_reject_project_repo.get("demo-project-4").status == ProjectStatus.RELEASE_READY

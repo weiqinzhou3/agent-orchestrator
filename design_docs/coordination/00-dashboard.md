@@ -3,22 +3,41 @@
 ## Current Snapshot
 
 - Project: `agent-orchestrator`
-- Active branch: `main`
-- Active phase: `phase-01 (closed)`
-- Status: `CODE_MERGED / REVIEW_COMPLETED / CLOSEOUT_COMPLETED`
+- Active branch: `feat/phase-02-minimal-control-flow`
+- Active phase: `phase-02`
+- Status: `PHASE_01_CLOSED / PHASE_02_AWAITING_REVIEW`
 - Owner: `Codex`
 - Reviewer: `Claude Code`
 - Repository landing branch: `main`
-- Next step: `phase-02 kickoff` allowed, not started
+- Next step: Claude review of phase-02 minimal control flow
 - Baseline docs:
   - `design_docs/agent-orchestrator-spec-v1.2.md`
   - `design_docs/agent-orchestrator-interface-design-v1.2.md`
+
+## Phase Summary
+
+| Phase | Status | Notes |
+| --- | --- | --- |
+| Phase 01 | Closed | Accepted / merged / closeout completed |
+| Phase 02 | Awaiting review | Minimal control flow implemented on `feat/phase-02-minimal-control-flow` |
+
+## Phase 02 Kickoff
+
+- State: `implementation complete / awaiting review`
+- Goal: 最小控制链路
+- Plan: [design_docs/coordination/phase-02/codex-plan.md](phase-02/codex-plan.md)
+- Status log: [design_docs/coordination/phase-02/codex-status.md](phase-02/codex-status.md)
+- Handoff: [design_docs/coordination/phase-02/codex-handoff.md](phase-02/codex-handoff.md)
+
+- 已在 Phase 01 骨架之上补最小 bootstrap / phase / approval / project 控制闭环。
+- 已把 job / snapshot / artifact / scheduler 推进到最小可用内存实现。
+- 真实 worker、真实 artifact、真实 adapter side effect 与 durable 持久化仍继续延后。
 
 ## Phase 01 Status and Scope
 
 - State: `accepted / closed`
 - Merge summary: [design_docs/coordination/phase-01/merge-summary.md](phase-01/merge-summary.md)
-- Gate conclusion: Phase 01 已关闭，允许进入 Phase 02 kickoff；Phase 02 尚未开始编码。
+- Gate conclusion: Phase 01 已关闭，允许进入 Phase 02 kickoff；Phase 02 当前处于 kickoff started 状态。
 
 - 建立最小 Python 工程骨架。
 - 先落状态机门禁、repository 白名单与 application guard。
@@ -30,6 +49,10 @@
 
 | Item | Status | Notes |
 | --- | --- | --- |
+| Phase 01 closeout | Done | Accepted / closed / merged to `main` |
+| Phase 02 kickoff docs | Done | `codex-plan.md` / `codex-status.md` / `codex-handoff.md` 已建立并更新 |
+| Phase 02 implementation | Done | 最小控制链路已落地并通过全量测试 |
+| Phase 02 review handoff | In Progress | 当前等待 Claude Code review |
 | Read spec/interface docs | Done | 已确认 v1.2 门禁与骨架约束 |
 | Write phase-01 phase doc | Done | `design_docs/phases/phase-01-gates-and-skeleton.md` 已转为完成阶段档案 |
 | Create package skeleton | Done | `agent_orchestrator/` 与 `tests/` 已随 PR #1 合入 `main` |
@@ -57,6 +80,13 @@
 - Claude review in `design_docs/reviews/phase-01-claude-review.md`
 - Merge summary in `design_docs/coordination/phase-01/merge-summary.md`
 - Phase closeout status updates in dashboard and phase archive
+
+## Phase 02 Deliverables
+
+- Kickoff plan in `design_docs/coordination/phase-02/codex-plan.md`
+- Status tracker in `design_docs/coordination/phase-02/codex-status.md`
+- Handoff tracker in `design_docs/coordination/phase-02/codex-handoff.md`
+- Minimal control flow implementation and coverage on branch `feat/phase-02-minimal-control-flow`
 
 ## Deferred Beyond Phase 02
 
