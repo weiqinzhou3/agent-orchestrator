@@ -200,6 +200,7 @@ class PhaseService:
             self._enter_contract_path(project_name, phase_name, executed)
             phase = self.phase_repo.get(project_name, phase_name)
 
+        # Latch the resume entry so a run starting from blockers/recheck executes that recovery path once.
         blockers_entry = phase.status == PhaseStatus.BLOCKED_ON_OPEN_BLOCKERS
         recheck_entry = phase.status == PhaseStatus.RECHECK_PENDING
 

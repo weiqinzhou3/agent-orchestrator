@@ -5,11 +5,11 @@
 - Project: `agent-orchestrator`
 - Active branch: `feat/phase-02-minimal-control-flow`
 - Active phase: `phase-02`
-- Status: `PHASE_01_CLOSED / PHASE_02_AWAITING_REVIEW`
+- Status: `PHASE_01_CLOSED / PHASE_02_APPROVED_PENDING_MERGE`
 - Owner: `Codex`
 - Reviewer: `Claude Code`
 - Repository landing branch: `main`
-- Next step: Claude review of phase-02 minimal control flow
+- Next step: merge `feat/phase-02-minimal-control-flow` to `main`
 - Baseline docs:
   - `design_docs/agent-orchestrator-spec-v1.2.md`
   - `design_docs/agent-orchestrator-interface-design-v1.2.md`
@@ -19,18 +19,23 @@
 | Phase | Status | Notes |
 | --- | --- | --- |
 | Phase 01 | Closed | Accepted / merged / closeout completed |
-| Phase 02 | Awaiting review | Minimal control flow implemented on `feat/phase-02-minimal-control-flow` |
+| Phase 02 | Approved / pending merge | Minimal control flow 已通过 reviewer，当前待 merge 到 `main` |
 
-## Phase 02 Kickoff
+## Phase 02 Status
 
-- State: `implementation complete / awaiting review`
+- State: `approved / pending merge`
 - Goal: 最小控制链路
 - Plan: [design_docs/coordination/phase-02/codex-plan.md](phase-02/codex-plan.md)
 - Status log: [design_docs/coordination/phase-02/codex-status.md](phase-02/codex-status.md)
 - Handoff: [design_docs/coordination/phase-02/codex-handoff.md](phase-02/codex-handoff.md)
+- Merge summary: [design_docs/coordination/phase-02/merge-summary.md](phase-02/merge-summary.md)
+- Reviewer archive: `design_docs/reviews/phase-02-claude-review.md`
 
 - 已在 Phase 01 骨架之上补最小 bootstrap / phase / approval / project 控制闭环。
 - 已把 job / snapshot / artifact / scheduler 推进到最小可用内存实现。
+- Phase 02 minimal control flow 已通过 Claude reviewer，结论为 `APPROVED`，无高/中优先级问题。
+- 当前下一步是将 `feat/phase-02-minimal-control-flow` merge 到 `main`。
+- Phase 03 尚未开始，本轮 closeout 不提前进入 Phase 03 代码或 kickoff。
 - 真实 worker、真实 artifact、真实 adapter side effect 与 durable 持久化仍继续延后。
 
 ## Phase 01 Status and Scope
@@ -52,7 +57,10 @@
 | Phase 01 closeout | Done | Accepted / closed / merged to `main` |
 | Phase 02 kickoff docs | Done | `codex-plan.md` / `codex-status.md` / `codex-handoff.md` 已建立并更新 |
 | Phase 02 implementation | Done | 最小控制链路已落地并通过全量测试 |
-| Phase 02 review handoff | In Progress | 当前等待 Claude Code review |
+| Phase 02 review handoff | Done | reviewer 文档已归档到 `design_docs/reviews/phase-02-claude-review.md` |
+| Phase 02 Claude review | Done | `APPROVED`；无高/中优先级问题，仅保留低优先级人工复核项 |
+| Phase 02 closeout docs | Done | dashboard / status / handoff / merge summary 已同步到 merge 前状态 |
+| Phase 02 merge to main | Pending | 当前唯一剩余动作；完成 merge 前不启动 Phase 03 |
 | Read spec/interface docs | Done | 已确认 v1.2 门禁与骨架约束 |
 | Write phase-01 phase doc | Done | `design_docs/phases/phase-01-gates-and-skeleton.md` 已转为完成阶段档案 |
 | Create package skeleton | Done | `agent_orchestrator/` 与 `tests/` 已随 PR #1 合入 `main` |
@@ -68,6 +76,9 @@
 ## Reviewer Inputs Completed
 
 - Claude review 已完成，并确认实现严格遵守 v1.2 文档语义。
+- Phase 02 review 结论为 `APPROVED`，无高优先级问题、无中优先级问题。
+- `BootstrapService._ensure_runtime_dependencies` 已人工复核；当前实现无需为了“更简洁”调整 waterfall 顺序。
+- `PhaseService` 中 `blockers_entry` / `recheck_entry` 恢复入口已人工复核；当前实现满足恢复场景边界。
 - Approval 工厂作为唯一阻塞态切换责任方的约束已完成审查。
 - `run_phase()` / `run_bootstrap()` 固定顺序已完成审查。
 - close-path stub 的边界已确认停留在 Phase 01，不越界到真实 worker 集成。
@@ -86,6 +97,8 @@
 - Kickoff plan in `design_docs/coordination/phase-02/codex-plan.md`
 - Status tracker in `design_docs/coordination/phase-02/codex-status.md`
 - Handoff tracker in `design_docs/coordination/phase-02/codex-handoff.md`
+- Merge summary in `design_docs/coordination/phase-02/merge-summary.md`
+- Claude review archive in `design_docs/reviews/phase-02-claude-review.md`
 - Minimal control flow implementation and coverage on branch `feat/phase-02-minimal-control-flow`
 
 ## Deferred Beyond Phase 02
@@ -93,3 +106,4 @@
 - Real worker execution and orchestration integration
 - Persistent job / snapshot stores and lease recovery
 - Durable close-path idempotency side effects
+- Phase 03 kickoff and Phase 03 implementation work
