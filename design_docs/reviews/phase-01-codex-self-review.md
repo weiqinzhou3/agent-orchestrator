@@ -14,6 +14,8 @@
   4. waterfall
 - 落地 `ApprovalService.create_*()` 工厂职责，统一执行 approval 创建与 `BLOCKED_ON_HUMAN` 状态切换。
 - 落地 `FileRunLockRepository` 本地最小实现，并通过测试验证 scope 互斥。
+- 落地 close-path active execution 最小 stub，可对 `APPEND_BACKLOG` / `CLOSE_PHASE` 设置并清理 active execution。
+- 将测试扩展到状态机合法/非法迁移、服务级锁并发、approval caller 去重与 close-path active execution。
 - 新增 phase 文档与 coordination dashboard。
 
 ## 2. 与 spec/interface docs 的映射
@@ -44,20 +46,25 @@
 
 - bootstrap repo/review、phase build/review/fix/recheck/close 的真实 worker 路径仍为 skeleton/stub。
 - `PhaseGateSnapshotRepository`、`JobRepository`、`ArtifactStore` 目前只有最小实现，未接入真实持久化。
-- close-path 的真正幂等去重与 close marker 落库尚未实现，本轮仅预留接口位和参数位。
+- close-path 的真正幂等去重与 close marker 落库尚未实现；当前只有 fake job id + active execution stub。
 - CLI 目前只完成命令结构与解析，尚未接入真实容器与持久化环境。
+- 以下内容故意延后到 phase-02 之后：
+  - 真实 worker 集成
+  - artifact / gate payload 真实解析
+  - lease freshness 与 stale reconciliation 的真实 job 恢复
+  - durable backlog dedupe / close marker 副作用
 
 ## 4. 风险 / 待 Reviewer 重点检查项
 
 - `run_phase()` waterfall 当前是 skeleton；请确认 reviewer 将重点放在顺序、门禁和扩展点，而非缺失的业务 path。
 - `FileRunLockRepository` 采用本地 lock file 最小实现，满足单机互斥测试，但尚未解决 crash 后 stale lock 清理。
 - `StubContractService` 为便于骨架推进返回默认 valid contract；后续接入真实 contract 校验时，需确认不改动已冻结的状态语义。
-- `PhaseService._run_close_path()` 只预留 `dedupe_scope` / `close_marker`，没有提前补业务副作用。
+- `PhaseService._run_close_path()` 现在只提供 fake close-path 执行与 active execution 生命周期，没有提前补真实副作用。
 
 ## 5. 测试结果
 
 - `pytest -q`
-  - 结果：`12 passed`
+  - 结果：`358 passed`
 - `python3 -m agent_orchestrator.cli.main --help`
   - 结果：CLI 顶层命令成功展示 `project` / `bootstrap` / `phase` / `approvals`
 

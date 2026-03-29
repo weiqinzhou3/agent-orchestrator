@@ -50,6 +50,11 @@
 - 为 close-path 预留幂等参数位：
   - `dedupe_scope`
   - `close_marker`
+- 落地 close-path active execution 的最小 stub 行为：
+  - `APPEND_BACKLOG`
+  - `CLOSE_PHASE`
+  - set / clear active execution
+  - fake job id 占位
 - 补最小测试，覆盖门禁、顺序与锁行为。
 
 ## 3. Out of Scope
@@ -58,6 +63,7 @@
 - bootstrap repo/review、phase build/review/fix/recheck/close 的完整业务实现。
 - 数据库持久化、远程锁、分布式 lease 与多进程外部协调。
 - backlog item 指纹生成、close marker 落库的最终幂等实现。
+- close-path 与 review/build/fix/recheck 的真实 job 持久化与 worker 执行。
 - 真实审批流 UI、外部通知、审计报表。
 - 超出 v1.2 文档定义的新增状态、新增命令语义或额外恢复路径。
 
@@ -123,13 +129,17 @@
 
 - 先写失败测试，再写最小实现。
 - 单元测试覆盖以下最小门禁：
+  - repository 白名单接受全部合法 project/phase 状态跳转。
   - repository 白名单拒绝非法 project/phase 状态跳转。
   - `ProjectService.on_phase_done()` 在 `project.status != PHASE_ACTIVE` 时拒绝推进。
   - `ProjectService.advance()` 支持 `BOOTSTRAP_READY -> RELEASE_READY` 空 phase plan 边缘路径。
   - `ApprovalService.create_*()` 完成 approval 创建与阻塞态切换，调用方不需要也不允许重复切换。
+  - `PhaseService` contract caller 与 `ProjectService.request_close()` 不重复执行 `BLOCKED_ON_HUMAN`。
   - `run_bootstrap()` 顺序固定为 lock -> inflight -> normalize -> waterfall。
   - `run_phase()` 顺序固定为 lock -> inflight -> normalize -> waterfall，且 close-path 活动阶段保留接口位。
   - `RunLockRepository` 对相同 project 或 `(project, phase)` scope 实现互斥，第二次获取快速失败。
+  - service 级 `bootstrap run` / `phase run` 并发进入同一 scope 时快速失败。
+  - close-path `APPEND_BACKLOG` / `CLOSE_PHASE` 能设置并清理 active execution。
 - CLI 做最小冒烟测试：
   - `python -m agent_orchestrator.cli.main --help`
   - 子命令解析不报错。
@@ -145,7 +155,26 @@
 - `RunLockRepository` 最小本地实现可通过互斥测试。
 - `ApprovalService.create_*()` 是唯一执行阻塞态切换的入口，测试能证明不存在外层重复 `update_status(BLOCKED_ON_HUMAN)`。
 - `READY_TO_CLOSE` 不新增 phase 状态，但 close-path 接口包含 `APPEND_BACKLOG` / `CLOSE_PHASE` 与 `dedupe_scope` / `close_marker` 预留位。
+- close-path 最小 stub 已能设置/清理 active execution，并为 stale reconciliation 与幂等重跑保留测试入口。
 - phase-01 文档、dashboard、自检报告均已更新。
+
+## 10. 当前实现状态
+
+### 10.1 已完成
+
+- phase-01 门禁、骨架、状态机、repository 白名单、application guard 已落地。
+- `run_bootstrap()` / `run_phase()` 固定顺序已由测试锁定。
+- 四类 approval 工厂职责已落地，并有测试证明 `BLOCKED_ON_HUMAN` 不会被调用方重复切换。
+- close-path active execution 已具备最小 stub 逻辑，可设置/清理 `APPEND_BACKLOG` 与 `CLOSE_PHASE`。
+- 当前验证结果为 `pytest -q` 全量 `358 passed`。
+
+### 10.2 故意延后到 phase-02 之后
+
+- 真实 worker 集成、artifact 产物校验与 review payload 解析。
+- `JobRepository` / `PhaseGateSnapshotRepository` 的真实持久化与 lease 管理。
+- stale reconciliation 的真实 job 级恢复细节。
+- close-path 去重键、close marker 的真实幂等副作用与持久化。
+- CLI 到真实容器装配、配置加载与外部依赖接线。
 
 ## 8. 风险点
 
