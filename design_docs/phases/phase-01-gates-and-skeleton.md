@@ -191,3 +191,11 @@
 - 是否遗漏 `RunLockRepository` 或把锁实现降级成无测试占位。
 - 是否存在调用方重复 `update_status(BLOCKED_ON_HUMAN)` 的违规链路。
 - `READY_TO_CLOSE` 是否被错误扩展成新的 phase 状态，或被当成纯静态状态忽略 active execution。
+
+## 11. Closeout Status
+
+- 本阶段已完成并于 `2026-03-29` 通过 PR `#1` 合并到 `main`；当前主线 merge commit 为 `abedccb1d16afe40bd4aa35924f9c292a6639836`。
+- 当前阶段 gate 结论为 `accepted / closed`，不再处于执行中或待 review 状态。
+- 当前仅保留一个低优先级遗留问题：`FileRunLockRepository` 在异常崩溃后的 stale lock 残留风险；该问题不阻塞 Phase 02 kickoff。
+- 以下事项明确留到 Phase 02 或更后续阶段处理：真实 worker、持久化 job / snapshot store、stale lease / job 真实恢复、durable close-path 幂等副作用、外部执行接线。
+- 本文档自本次 closeout 起由“执行中阶段文档”转为“已完成阶段档案”；原始目标、scope 与验收标准继续作为 Phase 01 的归档依据保留，不再作为新增实现范围。

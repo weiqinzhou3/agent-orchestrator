@@ -79,3 +79,9 @@
   - `ApprovalService.create_close_phase_with_important_open()`
   - `ApprovalService.create_bootstrap_ready_with_important_open()`
   - `ApprovalService.create_release_ready_confirm()`
+
+## 7. Post-Merge Archive Note
+
+- Phase 01 代码已于 `2026-03-29` 通过 PR `#1` 合入 `main`。
+- 当前 dashboard、phase 主文档与 merge summary 已完成收口；本自检文档继续保留，但用途已转为归档参考材料。
+- 现阶段唯一剩余 reviewer 风险为低优先级 stale lock 残留问题，不影响 Phase 01 关闭与 Phase 02 kickoff 准备。
