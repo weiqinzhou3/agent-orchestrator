@@ -29,7 +29,8 @@
 | Create package skeleton | Done | `agent_orchestrator/` 与 `tests/` 已建立 |
 | Add state machine guards | Done | repository 白名单 + `ProjectService` guard |
 | Add run lock implementation | Done | 本地文件锁实现，可测试 scope 互斥 |
-| Add minimal tests | Done | `pytest` 12 项通过 |
+| Add minimal tests | Done | 已扩展到 `pytest` 358 项通过 |
+| Add close-path active execution stub | Done | `APPEND_BACKLOG` / `CLOSE_PHASE` 可 set/clear active execution |
 | Write self-review | Done | `design_docs/reviews/phase-01-codex-self-review.md` |
 
 ## Reviewer Inputs
@@ -37,6 +38,7 @@
 - 重点审查是否严格遵守 v1.2 文档语义。
 - 重点审查 approval 工厂是否为唯一阻塞态切换责任方。
 - 重点审查 `run_phase()` / `run_bootstrap()` 顺序是否被破坏。
+- 重点审查 close-path stub 是否止步于 phase-01，不越界到真实 worker 集成。
 
 ## Deliverables Planned
 
@@ -44,3 +46,9 @@
 - Test suite in `tests/`
 - Self-review in `design_docs/reviews/phase-01-codex-self-review.md`
 - One commit on branch `feat/phase-01-gates-and-skeleton`
+
+## Deferred Beyond Phase 02
+
+- Real worker execution and orchestration integration
+- Persistent job / snapshot stores and lease recovery
+- Durable close-path idempotency side effects

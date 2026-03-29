@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from agent_orchestrator.application.contract_service import StubContractService
+from agent_orchestrator.domain.entities import utc_now
 from agent_orchestrator.domain.enums import ApprovalType, JobStatus, PhaseResumeStage, PhaseStatus, ReviewOriginStage
 from agent_orchestrator.domain.errors import (
     ContractInvalidError,
@@ -245,7 +246,36 @@ class PhaseService:
         self._close_phase_step(project_name, phase_name, executed, close_marker=close_marker)
 
     def _append_backlog_step(self, project_name: str, phase_name: str, executed: list[str], *, dedupe_scope: str) -> None:
-        return None
+        job_id = f"append-backlog:{project_name}:{phase_name}"
+        self.phase_repo.set_active_execution(
+            project_name,
+            phase_name,
+            PhaseResumeStage.APPEND_BACKLOG,
+            job_id,
+            utc_now(),
+        )
+        try:
+            executed.append(job_id)
+            _ = dedupe_scope
+        finally:
+            self.phase_repo.clear_active_execution(project_name, phase_name)
 
     def _close_phase_step(self, project_name: str, phase_name: str, executed: list[str], *, close_marker: str) -> None:
-        return None
+        job_id = f"close-phase:{project_name}:{phase_name}"
+        self.phase_repo.set_active_execution(
+            project_name,
+            phase_name,
+            PhaseResumeStage.CLOSE_PHASE,
+            job_id,
+            utc_now(),
+        )
+        try:
+            executed.append(job_id)
+            _ = close_marker
+        finally:
+            self.phase_repo.clear_active_execution(project_name, phase_name)
+
+        self.phase_repo.clear_failure_context(project_name, phase_name)
+        self.phase_repo.update_status(project_name, phase_name, PhaseStatus.DONE)
+        if self.project_service is not None:
+            self.project_service.on_phase_done(project_name, phase_name)
