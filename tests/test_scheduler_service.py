@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 from agent_orchestrator.application.scheduler_service import InMemorySchedulerService
 from agent_orchestrator.domain.entities import Job
 from agent_orchestrator.domain.enums import JobStatus
 from agent_orchestrator.domain.results import ArtifactValidationResult, JobCompletion, JobExecutionSummary
 from agent_orchestrator.infra.db.repositories import InMemoryJobRepository
+from agent_orchestrator.infra.execution.subprocess_runner import SubprocessRunner
+from agent_orchestrator.infra.fs.artifact_store import FileArtifactStore
+from agent_orchestrator.infra.workers.local import LocalSubprocessJobFactory
 
 
 def _summary(
@@ -69,3 +75,36 @@ def test_in_memory_scheduler_lease_freshness_can_be_toggled() -> None:
     scheduler.set_lease_fresh(job.job_id, True)
 
     assert scheduler.is_job_lease_fresh(job.job_id) is True
+
+
+def test_in_memory_scheduler_executes_real_local_worker_when_configured(tmp_path: Path) -> None:
+    job_repo = InMemoryJobRepository()
+    artifact_store = FileArtifactStore(tmp_path)
+    scheduler = InMemorySchedulerService(
+        job_repo=job_repo,
+        worker_runner=SubprocessRunner(artifact_store=artifact_store),
+        worker_job_factory=LocalSubprocessJobFactory(python_executable=sys.executable),
+        planned_worker_inputs={
+            "phase-build": [
+                {"review_payload": {"decision": "PASS", "later_items": [{"id": "later-1"}]}},
+            ],
+        },
+    )
+    job = Job(
+        job_id="phase-build:demo-project:phase-01",
+        project_name="demo-project",
+        phase_name="phase-01",
+        job_type="phase-build",
+        status=JobStatus.QUEUED,
+    )
+
+    scheduler.enqueue(job)
+    exec_summary = scheduler.execute_job(job.job_id)
+
+    stored = job_repo.get(job.job_id)
+    assert exec_summary.job_id == job.job_id
+    assert exec_summary.completion.status == JobStatus.SUCCEEDED
+    assert exec_summary.exit_code == 0
+    assert stored.status == JobStatus.SUCCEEDED
+    assert stored.result_path == exec_summary.result_path
+    assert artifact_store.read_json(exec_summary.result_path)["review_payload"]["decision"] == "PASS"

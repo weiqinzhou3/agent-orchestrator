@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import sys
 from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
 
@@ -15,7 +17,10 @@ from agent_orchestrator.infra.db.repositories import (
     InMemoryPhaseRepository,
     InMemoryProjectRepository,
 )
+from agent_orchestrator.infra.execution.subprocess_runner import SubprocessRunner
 from agent_orchestrator.infra.fs.artifact_store import InMemoryArtifactStore
+from agent_orchestrator.infra.fs.artifact_store import FileArtifactStore
+from agent_orchestrator.infra.workers.local import LocalSubprocessJobFactory
 
 
 class RecordingProjectRepository(InMemoryProjectRepository):
@@ -66,6 +71,31 @@ def _make_service(make_project, planned_job_results, artifact_store):
     approval_service = ApprovalService(project_repo=project_repo, phase_repo=phase_repo, approval_repo=approval_repo)
     job_repo = InMemoryJobRepository()
     scheduler = InMemorySchedulerService(job_repo=job_repo, planned_job_results=planned_job_results)
+    service = BootstrapService(
+        project_repo=project_repo,
+        run_lock_repo=NoopRunLockRepository(),
+        job_repo=job_repo,
+        scheduler=scheduler,
+        approval_repo=approval_repo,
+        approval_service=approval_service,
+        artifact_store=artifact_store,
+    )
+    return service, project_repo, approval_repo
+
+
+def _make_real_service(make_project, tmp_path: Path, planned_worker_inputs):
+    artifact_store = FileArtifactStore(tmp_path)
+    project_repo = RecordingProjectRepository({"demo-project": make_project(ProjectStatus.DESIGN_READY)})
+    phase_repo = InMemoryPhaseRepository({})
+    approval_repo = InMemoryApprovalRepository()
+    approval_service = ApprovalService(project_repo=project_repo, phase_repo=phase_repo, approval_repo=approval_repo)
+    job_repo = InMemoryJobRepository()
+    scheduler = InMemorySchedulerService(
+        job_repo=job_repo,
+        worker_runner=SubprocessRunner(artifact_store=artifact_store),
+        worker_job_factory=LocalSubprocessJobFactory(python_executable=sys.executable),
+        planned_worker_inputs=planned_worker_inputs,
+    )
     service = BootstrapService(
         project_repo=project_repo,
         run_lock_repo=NoopRunLockRepository(),
@@ -194,3 +224,75 @@ def test_bootstrap_missing_artifact_and_worker_failure_paths(
 
     assert result.final_status == expected_status
     assert project.last_failed_bootstrap_stage == BootstrapResumeStage.BOOTSTRAP_REVIEW
+
+
+@pytest.mark.parametrize(
+    ("planned_worker_inputs", "expected_status", "expected_approval_type"),
+    [
+        (
+            {
+                "bootstrap-repo": [{"review_payload": {"decision": "PASS"}}],
+                "bootstrap-review": [{}],
+            },
+            ProjectStatus.BOOTSTRAP_READY,
+            None,
+        ),
+        (
+            {
+                "bootstrap-repo": [
+                    {
+                        "review_payload": {
+                            "decision": "CONDITIONAL_PASS",
+                            "important_items": [{"id": "important-1"}],
+                        }
+                    }
+                ],
+                "bootstrap-review": [{}],
+            },
+            ProjectStatus.BLOCKED_ON_HUMAN,
+            ApprovalType.BOOTSTRAP_READY_WITH_IMPORTANT_OPEN,
+        ),
+        (
+            {
+                "bootstrap-repo": [{"review_payload": {"decision": "FAIL", "blockers": [{"id": "blocker-1"}]}}],
+                "bootstrap-review": [{}],
+            },
+            ProjectStatus.BLOCKED_ON_OPEN_BLOCKERS,
+            None,
+        ),
+        (
+            {
+                "bootstrap-repo": [{"review_payload": ["invalid-payload"]}],
+                "bootstrap-review": [{}],
+            },
+            ProjectStatus.BLOCKED_ON_MISSING_ARTIFACT,
+            None,
+        ),
+        (
+            {
+                "bootstrap-repo": [{"omit_review_output": True}],
+                "bootstrap-review": [{}],
+            },
+            ProjectStatus.BLOCKED_ON_MISSING_ARTIFACT,
+            None,
+        ),
+    ],
+)
+def test_bootstrap_local_subprocess_execution_paths(
+    make_project,
+    tmp_path: Path,
+    planned_worker_inputs,
+    expected_status,
+    expected_approval_type,
+) -> None:
+    service, _, approval_repo = _make_real_service(make_project, tmp_path, planned_worker_inputs)
+
+    result = service.run_bootstrap("demo-project")
+
+    assert result.final_status == expected_status
+    if expected_approval_type is None:
+        assert result.pending_approval_id is None
+        return
+
+    approval = approval_repo.get(result.pending_approval_id)
+    assert approval.approval_type == expected_approval_type
